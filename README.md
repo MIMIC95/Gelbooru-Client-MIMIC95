@@ -1,19 +1,28 @@
 <h1>Gelbooru Image Downloader/Viewer by MIMIC95</h1>
 
 To use the program you only need to make a Gelbooru account, google it. 
+
 ![image](https://github.com/user-attachments/assets/80f7bf9b-f3e5-4d14-b8d8-706b38470294)
 
+
 Go to Options
+
 ![image](https://github.com/user-attachments/assets/1b04d040-6cf2-4fe1-a62c-631fa7f65289)
 
+
 Scroll all the way down to 
+
 ![image](https://github.com/user-attachments/assets/efb64f02-cce3-454a-ac51-a9f7066dfe9a)
+
 
 copy what ever is between &api_key= and &user_id=... 
 &api_key=<b>YOURAPIKEYISHERE</b>&user_id=34287
 
+
 Open Gelbooru Image Downloader/Viewer
+
 ![image](https://github.com/user-attachments/assets/eed66c4b-6fdc-43c4-8229-8cd60dfcba00)
+
 
 Input your API Key and add tags.
 
