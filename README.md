@@ -2,8 +2,10 @@
 
 To use the program you only need to make a Gelbooru account, google it. 
 ![image](https://github.com/user-attachments/assets/80f7bf9b-f3e5-4d14-b8d8-706b38470294)
+
 Go to Options
 ![image](https://github.com/user-attachments/assets/1b04d040-6cf2-4fe1-a62c-631fa7f65289)
+
 Scroll all the way down to 
 ![image](https://github.com/user-attachments/assets/efb64f02-cce3-454a-ac51-a9f7066dfe9a)
 
