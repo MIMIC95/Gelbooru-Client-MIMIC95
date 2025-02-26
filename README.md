@@ -6,7 +6,9 @@ Supported Platforms
 -  Others.
 
 <h2>Showcase</h2>
+
 https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
+
 <h4>Features</h4>
 - Download pictures from Safebooru (no API key required) and Gelbooru (API key required).
 - Display downloaded pictures within the application, maintaining aspect ratios.
