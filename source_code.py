@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import filedialog
 from threading import Event, Thread
 import shutil
+import webbrowser
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
@@ -18,6 +19,7 @@ customtkinter.set_default_color_theme("dark-blue")
 my_count = 0
 data = []
 image_files = []
+image_urls = []
 config_file = "config.json"
 autoplay_event = Event()
 
@@ -48,6 +50,7 @@ class App(CTk):
 
         self.info_label = customtkinter.CTkLabel(master=frame, text="")
         self.info_label.grid(row=4, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+        self.info_label.bind("<Button-1>", self.open_image_url)
 
         self.slider = customtkinter.CTkSlider(master=frame, from_=0.5, to=10, number_of_steps=19, command=self.update_info_label)
         self.slider.set(2.5)
@@ -56,6 +59,10 @@ class App(CTk):
         self.progress_bar = customtkinter.CTkProgressBar(master=frame)
         self.progress_bar.grid(row=6, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
         self.progress_bar.set(0)
+
+        self.toggle_var = customtkinter.StringVar(value="Gelbooru")
+        self.toggle_button = customtkinter.CTkButton(master=frame, text="Gelbooru", command=self.toggle_site)
+        self.toggle_button.grid(row=7, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
 
         self.load_config()
 
@@ -85,11 +92,21 @@ class App(CTk):
         self.bind("<Right>", lambda event: self.send_request("next"))
         self.bind("<Left>", lambda event: self.send_request("prev"))
 
+    def toggle_site(self):
+        if self.toggle_var.get() == "Gelbooru":
+            self.toggle_var.set("Safebooru")
+            self.toggle_button.configure(text="Safebooru")
+        else:
+            self.toggle_var.set("Gelbooru")
+            self.toggle_button.configure(text="Gelbooru")
+        self.save_config(self.entry1.get(), 100, self.entry3.get())
+
     def save_config(self, tags, post_count, api_key):
         config = {
             "tags": tags,
             "post_count": post_count,
-            "api_key": api_key
+            "api_key": api_key,
+            "site": self.toggle_var.get()
         }
         with open(config_file, 'w') as f:
             json.dump(config, f)
@@ -100,6 +117,9 @@ class App(CTk):
                 config = json.load(f)
                 self.entry1.insert(0, config.get("tags", ""))
                 self.entry3.insert(0, config.get("api_key", ""))
+                site = config.get("site", "Gelbooru")
+                self.toggle_var.set(site)
+                self.toggle_button.configure(text=site)
 
     def download_image(self, image_url, image_path):
         image_data = requests.get(image_url).content
@@ -115,41 +135,56 @@ class App(CTk):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
             for i, (image_url, image_path) in enumerate(images):
-                if i < 10:
-                    futures.append(executor.submit(self.download_image, image_url, image_path))
-                else:
-                    Thread(target=self.delayed_download, args=(image_url, image_path)).start()
+                futures.append(executor.submit(self.download_image, image_url, image_path))
             concurrent.futures.wait(futures)
         self.display_image()
 
     def send_request(self, request_type):
-        global my_count, data, image_files
+        global my_count, data, image_files, image_urls
         if request_type == "search":
+
+            autoplay_event.clear()
+            self.progress_bar.set(0)
+            self.canvas.delete("all")
+
+            images_dir = os.path.join(os.path.dirname(__file__), "Images")
+            if os.path.exists(images_dir):
+                shutil.rmtree(images_dir)
+            os.makedirs(images_dir, exist_ok=True)
+
             tags = self.entry1.get()
             api_key = self.entry3.get()
             post_count = 100
             tags = tags
             self.save_config(tags, post_count, api_key)
 
-            request_url = f"https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&limit={post_count}&tags={tags}&api_key={api_key}"
+            if self.toggle_var.get() == "Gelbooru":
+                request_url = f"https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&limit={post_count}&tags={tags}&api_key={api_key}"
+            else:
+                request_url = f"https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit={post_count}&tags={tags}"
+
             response = requests.get(request_url)
 
             if response.status_code == 200:
                 try:
-                    data = response.json()["post"]
+                    if self.toggle_var.get() == "Gelbooru":
+                        data = response.json()["post"]
+                    else:
+                        data = response.json()
                     my_count = 0
                     image_files = []
-                    images_dir = os.path.join(os.path.dirname(__file__), "Images")
-                    os.makedirs(images_dir, exist_ok=True)
+                    image_urls = []
                     images = []
                     for i, post in enumerate(data):
                         image_url = post["file_url"]
                         if image_url.endswith(".mp4"):
                             print("Skipping: " + image_url)
                             continue
-                        image_name = f"image_{i}.jpg"
+                        image_extension = os.path.splitext(image_url)[1]
+                        image_name = f"image_{i+1:03d}{image_extension}"
                         image_path = os.path.join(images_dir, image_name)
                         image_files.append(image_path)
+                        image_urls.append(image_url)
                         images.append((image_url, image_path))
                     Thread(target=self.background_download, args=(images,)).start()
                     self.display_image()  
@@ -226,6 +261,11 @@ class App(CTk):
                 else: 
                     os.system(f'xdg-open "{image_path}"')
 
+    def open_image_url(self, event):
+        if my_count < len(image_urls):
+            image_url = image_urls[my_count]
+            webbrowser.open(image_url)
+
     def autoplay(self):
         global my_count
         if autoplay_event.is_set():
@@ -261,11 +301,12 @@ class App(CTk):
     def update_info_label(self, *args):
         if my_count < len(image_files):
             image_path = image_files[my_count]
+            image_url = image_urls[my_count]
             if os.path.exists(image_path):
                 image = Image.open(image_path)
-                self.info_label.configure(text=f"Image: {os.path.basename(image_path)} | Size: {image.width}x{image.height} | Delay: {self.slider.get()}s")
+                self.info_label.configure(text=f"URL: {image_url} | Size: {image.width}x{image.height} | Delay: {self.slider.get()}s")
             else:
-                self.info_label.configure(text=f"Image not found | Delay: {self.slider.get()}s")
+                self.info_label.configure(text=f"URL: {image_url} | Image not found | Delay: {self.slider.get()}s")
         else:
             self.info_label.configure(text=f"Delay: {self.slider.get()}s")
 
