@@ -5,7 +5,9 @@ Supported Platforms
 -  Arch Linux
 -  Others.
 
-https://github.com/user-attachments/assets/a79a44c9-d51a-4532-adbe-ddd2a6cee9dd
+
+https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
+
 
 To use the program you only need to make a Gelbooru account, google it. 
 
