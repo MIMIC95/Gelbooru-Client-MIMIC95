@@ -23,6 +23,8 @@ https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
 - Smart cleanup function that removes old search results when starting a new search.
 - Smart download function to download images efficiently without causing delays or unresponsiveness in the program.
 
+<hr>
+
 To use the program you only need to make a Gelbooru account, google it. 
 
 ![image](https://github.com/user-attachments/assets/80f7bf9b-f3e5-4d14-b8d8-706b38470294)
