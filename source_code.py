@@ -1,4 +1,3 @@
-#Made by https://github.com/MIMIC95 feel free to send feedback.
 import time
 import customtkinter
 from PIL import Image, ImageTk
@@ -38,13 +37,13 @@ class App(CTk):
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
-        self.canvas = tk.Canvas(master=frame, bd=2, relief="solid", background="dimgray")
+        self.canvas = tk.Canvas(master=frame, bd=2, relief="solid", background="#212121")
         self.canvas.grid(row=0, column=0, columnspan=5, pady=20, padx=20, sticky="nsew")
 
         self.entry1 = customtkinter.CTkEntry(master=frame, placeholder_text="Tags")
         self.entry1.grid(row=1, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
 
-        self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key")
+        self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key", show="*")
         self.entry3.grid(row=2, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
 
         self.info_label = customtkinter.CTkLabel(master=frame, text="")
@@ -53,6 +52,10 @@ class App(CTk):
         self.slider = customtkinter.CTkSlider(master=frame, from_=0.5, to=10, number_of_steps=19, command=self.update_info_label)
         self.slider.set(2.5)
         self.slider.grid(row=3, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+
+        self.progress_bar = customtkinter.CTkProgressBar(master=frame)
+        self.progress_bar.grid(row=6, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+        self.progress_bar.set(0)
 
         self.load_config()
 
@@ -78,6 +81,9 @@ class App(CTk):
         frame.grid_columnconfigure(2, weight=1)
         frame.grid_columnconfigure(3, weight=1)
         frame.grid_columnconfigure(4, weight=1)
+
+        self.bind("<Right>", lambda event: self.send_request("next"))
+        self.bind("<Left>", lambda event: self.send_request("prev"))
 
     def save_config(self, tags, post_count, api_key):
         config = {
@@ -179,6 +185,8 @@ class App(CTk):
             image_path = image_files[my_count]
             if not os.path.exists(image_path):
                 print(f"Image not found: {image_path}")
+                self.progress_bar.set(0.5)  
+                self.wait_for_image(image_path)
                 return
             print("Displaying: " + image_path)
             image = Image.open(image_path)
@@ -200,8 +208,14 @@ class App(CTk):
             self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=self.tk_image, anchor="center")
             self.update_idletasks()
             self.update_info_label()
+            self.progress_bar.set(1)  
             print("> displayed " + str(my_count + 1) + " images out of " + str(len(image_files)))
             time.sleep(0.1)
+
+    def wait_for_image(self, image_path):
+        while not os.path.exists(image_path):
+            time.sleep(0.1)
+        self.display_image()
 
     def open_image(self, event):
         if my_count < len(image_files):
@@ -218,6 +232,8 @@ class App(CTk):
             self.next_image()
             delay = int(self.slider.get() * 1000) 
             self.after(delay, self.autoplay) 
+            if my_count >= len(image_files) - 1:
+                my_count = -1  
 
     def toggle_autoplay(self):
         if autoplay_event.is_set():
