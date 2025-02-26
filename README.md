@@ -10,18 +10,18 @@ Supported Platforms
 https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
 
 <h4>Features</h4>
-- Download pictures from Safebooru (no API key required) and Gelbooru (API key required).
-- Display downloaded pictures within the application, maintaining aspect ratios.
-- User interface with controls to navigate to the previous or next picture using buttons or keyboard arrow keys.
-- Autoplay feature that automatically displays downloaded images in a loop.
-- Backup images function to save search results to a user-selected folder.
-- Toggle button to switch between Gelbooru (NSFW) and Safebooru (SFW) searches.
-- Slider to control the delay of the autoplay feature.
-- Label displaying image information: URL, image size, and autoplay delay.
-- Clicking the information label opens the image URL in the default browser.
-- Double-clicking the image opens it in the default image viewer.
-- Smart cleanup function that removes old search results when starting a new search.
-- Smart download function to download images efficiently without causing delays or unresponsiveness in the program.
+- Download pictures from Safebooru (no API key required) and Gelbooru (API key required). <br/>
+- Display downloaded pictures within the application, maintaining aspect ratios.<br/>
+- User interface with controls to navigate to the previous or next picture using buttons or keyboard arrow keys.<br/>
+- Autoplay feature that automatically displays downloaded images in a loop.<br/>
+- Backup images function to save search results to a user-selected folder.<br/>
+- Toggle button to switch between Gelbooru (NSFW) and Safebooru (SFW) searches.<br/>
+- Slider to control the delay of the autoplay feature.<br/>
+- Label displaying image information: URL, image size, and autoplay delay.<br/>
+- Clicking the information label opens the image URL in the default browser.<br/>
+- Double-clicking the image opens it in the default image viewer.<br/>
+- Smart cleanup function that removes old search results when starting a new search.<br/>
+- Smart download function to download images efficiently without causing delays or unresponsiveness in the program.<br/>
 
 <hr>
 
