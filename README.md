@@ -1,5 +1,10 @@
 <h1>Gelbooru Client by MIMIC95</h1>
 
+Supported Platforms
+-  Windows 10/11
+-  Arch Linux
+-  Others.
+
 To use the program you only need to make a Gelbooru account, google it. 
 
 ![image](https://github.com/user-attachments/assets/80f7bf9b-f3e5-4d14-b8d8-706b38470294)
