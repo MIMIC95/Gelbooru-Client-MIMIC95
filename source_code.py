@@ -8,10 +8,11 @@ import requests
 import os
 import concurrent.futures
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, Menu
 from threading import Event, Thread
 import shutil
 import webbrowser
+import pyperclip
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
@@ -20,6 +21,7 @@ my_count = 0
 data = []
 image_files = []
 image_urls = []
+image_tags = []
 config_file = "config.json"
 autoplay_event = Event()
 
@@ -27,61 +29,59 @@ class App(CTk):
     def __init__(self):
         super().__init__()
 
-        self.minsize(800, 600)
+        self.minsize(1200, 800)
         self.title("Gelbooru Image Downloader/Viewer by MIMIC95")
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         frame = customtkinter.CTkFrame(master=self)
-        frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
         self.canvas = tk.Canvas(master=frame, bd=2, relief="solid", background="#212121")
-        self.canvas.grid(row=0, column=0, columnspan=5, pady=20, padx=20, sticky="nsew")
-
-        self.entry1 = customtkinter.CTkEntry(master=frame, placeholder_text="Tags")
-        self.entry1.grid(row=1, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
-
-        self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key", show="*")
-        self.entry3.grid(row=2, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
-
-        self.info_label = customtkinter.CTkLabel(master=frame, text="")
-        self.info_label.grid(row=4, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
-        self.info_label.bind("<Button-1>", self.open_image_url)
+        self.canvas.grid(row=0, column=0, columnspan=5, pady=2, padx=2, sticky="nsew")
 
         self.slider = customtkinter.CTkSlider(master=frame, from_=0.5, to=10, number_of_steps=19, command=self.update_info_label)
         self.slider.set(2.5)
-        self.slider.grid(row=3, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+        self.slider.grid(row=2, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
+
+        self.entry1 = customtkinter.CTkEntry(master=frame, placeholder_text="Tags")
+        self.entry1.grid(row=3, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
+
+        self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key", show="*")
+        self.entry3.grid(row=4, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
 
         self.progress_bar = customtkinter.CTkProgressBar(master=frame)
-        self.progress_bar.grid(row=6, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+        self.progress_bar.grid(row=5, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
         self.progress_bar.set(0)
+
+        button_prev = customtkinter.CTkButton(master=frame, text="Previous", command=lambda: self.send_request("prev"))
+        button_prev.grid(row=6, column=0, pady=2, padx=2, sticky="ew")
+
+        button_search = customtkinter.CTkButton(master=frame, text="Search", command=lambda: self.send_request("search"))
+        button_search.grid(row=6, column=1, pady=2, padx=2, sticky="ew")
+
+        button_next = customtkinter.CTkButton(master=frame, text="Next", command=lambda: self.send_request("next"))
+        button_next.grid(row=6, column=2, pady=2, padx=2, sticky="ew")
+
+        self.button_autoplay = customtkinter.CTkButton(master=frame, text="Autoplay", command=self.toggle_autoplay)
+        self.button_autoplay.grid(row=6, column=3, pady=2, padx=2, sticky="ew")
+
+        button_backup = customtkinter.CTkButton(master=frame, text="BACKUP IMAGES", command=self.backup_images)
+        button_backup.grid(row=6, column=4, pady=2, padx=2, sticky="ew")
 
         self.toggle_var = customtkinter.StringVar(value="Gelbooru")
         self.toggle_button = customtkinter.CTkButton(master=frame, text="Gelbooru", command=self.toggle_site)
-        self.toggle_button.grid(row=7, column=0, columnspan=5, pady=5, padx=5, sticky="ew")
+        self.toggle_button.grid(row=7, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
 
         self.load_config()
 
         self.canvas.bind("<Double-Button-1>", self.open_image)
-
-        button_prev = customtkinter.CTkButton(master=frame, text="Previous", command=lambda: self.send_request("prev"))
-        button_prev.grid(row=5, column=0, pady=5, padx=5, sticky="ew")
-
-        button_search = customtkinter.CTkButton(master=frame, text="Search", command=lambda: self.send_request("search"))
-        button_search.grid(row=5, column=1, pady=5, padx=5, sticky="ew")
-
-        button_next = customtkinter.CTkButton(master=frame, text="Next", command=lambda: self.send_request("next"))
-        button_next.grid(row=5, column=2, pady=5, padx=5, sticky="ew")
-
-        self.button_autoplay = customtkinter.CTkButton(master=frame, text="Autoplay", command=self.toggle_autoplay)
-        self.button_autoplay.grid(row=5, column=3, pady=5, padx=5, sticky="ew")
-
-        button_backup = customtkinter.CTkButton(master=frame, text="BACKUP IMAGES", command=self.backup_images)
-        button_backup.grid(row=5, column=4, pady=5, padx=5, sticky="ew")
+        self.canvas.bind("<Button-3>", self.show_context_menu)
+        self.canvas.bind("<space>", self.toggle_autoplay)
 
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_columnconfigure(1, weight=1)
@@ -91,6 +91,21 @@ class App(CTk):
 
         self.bind("<Right>", lambda event: self.send_request("next"))
         self.bind("<Left>", lambda event: self.send_request("prev"))
+
+        self.context_menu = Menu(self, tearoff=0)
+        self.context_menu.add_command(label="Open Image URL", command=self.open_image_url)
+        self.context_menu.add_command(label="Copy Tags", command=self.copy_tags)
+        self.context_menu.add_command(label="Delete Image", command=self.delete_image)
+        self.context_menu.add_command(label="Save Image", command=self.save_image)
+        self.context_menu.add_command(label="Open Saved Images Folder", command=self.open_saved_images_folder)
+
+        self.bind("<Button-1>", self.close_context_menu)
+
+        self.bind_all("<F11>", self.check_focus_and_toggle_autoplay)
+
+    def check_focus_and_toggle_autoplay(self, event):
+        if self.focus_get() not in [self.entry1, self.entry3]:
+            self.toggle_autoplay()
 
     def toggle_site(self):
         if self.toggle_var.get() == "Gelbooru":
@@ -140,7 +155,7 @@ class App(CTk):
         self.display_image()
 
     def send_request(self, request_type):
-        global my_count, data, image_files, image_urls
+        global my_count, data, image_files, image_urls, image_tags
         if request_type == "search":
 
             autoplay_event.clear()
@@ -174,6 +189,7 @@ class App(CTk):
                     my_count = 0
                     image_files = []
                     image_urls = []
+                    image_tags = []
                     images = []
                     for i, post in enumerate(data):
                         image_url = post["file_url"]
@@ -185,6 +201,7 @@ class App(CTk):
                         image_path = os.path.join(images_dir, image_name)
                         image_files.append(image_path)
                         image_urls.append(image_url)
+                        image_tags.append(post["tags"])
                         images.append((image_url, image_path))
                     Thread(target=self.background_download, args=(images,)).start()
                     self.display_image()  
@@ -261,10 +278,49 @@ class App(CTk):
                 else: 
                     os.system(f'xdg-open "{image_path}"')
 
-    def open_image_url(self, event):
+    def open_image_url(self, event=None):
         if my_count < len(image_urls):
             image_url = image_urls[my_count]
             webbrowser.open(image_url)
+
+    def copy_tags(self):
+        if my_count < len(image_tags):
+            tags = image_tags[my_count].replace(" ", "+")
+            pyperclip.copy(tags)
+            print("Tags copied to clipboard")
+
+    def delete_image(self):
+        if my_count < len(image_files):
+            image_path = image_files[my_count]
+            if os.path.exists(image_path):
+                os.remove(image_path)
+                print(f"Deleted: {image_path}")
+                self.next_image()
+
+    def save_image(self):
+        if my_count < len(image_files):
+            image_path = image_files[my_count]
+            if os.path.exists(image_path):
+                saved_images_dir = os.path.join(os.path.dirname(__file__), "saved images")
+                os.makedirs(saved_images_dir, exist_ok=True)
+                shutil.copy(image_path, saved_images_dir)
+                print(f"Saved: {image_path} to {saved_images_dir}")
+
+    def open_saved_images_folder(self):
+        saved_images_dir = os.path.join(os.path.dirname(__file__), "saved images")
+        if os.path.exists(saved_images_dir):
+            if os.name == 'nt':
+                os.startfile(saved_images_dir)
+            else:
+                os.system(f'xdg-open "{saved_images_dir}"')
+        else:
+            print("Saved images folder does not exist.")
+
+    def show_context_menu(self, event):
+        self.context_menu.post(event.x_root, event.y_root)
+
+    def close_context_menu(self, event):
+        self.context_menu.unpost()
 
     def autoplay(self):
         global my_count
@@ -275,7 +331,7 @@ class App(CTk):
             if my_count >= len(image_files) - 1:
                 my_count = -1  
 
-    def toggle_autoplay(self):
+    def toggle_autoplay(self, event=None):
         if autoplay_event.is_set():
             autoplay_event.clear()
             self.button_autoplay.configure(text="Autoplay")
@@ -302,13 +358,14 @@ class App(CTk):
         if my_count < len(image_files):
             image_path = image_files[my_count]
             image_url = image_urls[my_count]
+            image_tags_text = ", ".join(image_tags[my_count].split())
             if os.path.exists(image_path):
                 image = Image.open(image_path)
-                self.info_label.configure(text=f"URL: {image_url} | Size: {image.width}x{image.height} | Delay: {self.slider.get()}s")
+                print(f"URL: {image_url} | Size: {image.width}x{image.height} | Delay: {self.slider.get()}s\nTags: {image_tags_text}")
             else:
-                self.info_label.configure(text=f"URL: {image_url} | Image not found | Delay: {self.slider.get()}s")
+                print(f"URL: {image_url} | Image not found | Delay: {self.slider.get()}s\nTags: {image_tags_text}")
         else:
-            self.info_label.configure(text=f"Delay: {self.slider.get()}s")
+            print(f"Delay: {self.slider.get()}s\nTags: ")
 
 if __name__ == "__main__":
     app = App()
