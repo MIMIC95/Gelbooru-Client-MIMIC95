@@ -1,4 +1,4 @@
-<h1>Gelbooru Client by MIMIC95</h1>
+<h1>Gelbooru & Safebooru Client by MIMIC95</h1>
 
 Supported Platforms
 -  Windows 10/11
