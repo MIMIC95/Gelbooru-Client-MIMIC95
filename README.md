@@ -1,4 +1,4 @@
-<h1>Gelbooru Image Downloader/Viewer by MIMIC95</h1>
+<h1>Gelbooru Client by MIMIC95</h1>
 
 To use the program you only need to make a Gelbooru account, google it. 
 
