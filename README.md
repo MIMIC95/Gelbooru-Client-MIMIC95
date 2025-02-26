@@ -27,12 +27,6 @@ Scroll all the way down to
 copy what ever is between &api_key= and &user_id=... 
 &api_key=<b>YOURAPIKEYISHERE</b>&user_id=34287
 
-
-Open Gelbooru Image Downloader/Viewer
-
-![image](https://github.com/user-attachments/assets/eed66c4b-6fdc-43c4-8229-8cd60dfcba00)
-
-
 Input your API Key and add tags.
 
 Tags:
