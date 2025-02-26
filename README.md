@@ -27,8 +27,8 @@ https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
 
 <h2>Setup Guide</h2>
 
-To use the program to access Gelbooru you only need to make a Gelbooru account, google it. 
-Technically you don't need a Gelbooru account or API Key but it might cause issues when accessing the API excessively.
+To use the program to access Gelbooru you only need to make a Gelbooru account, google it. <br/>
+Technically you don't need a Gelbooru account or API Key but it might cause issues when accessing the API excessively.<br/>
 
 ![image](https://github.com/user-attachments/assets/80f7bf9b-f3e5-4d14-b8d8-706b38470294)
 
