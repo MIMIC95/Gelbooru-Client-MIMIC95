@@ -6,13 +6,13 @@ from customtkinter import CTk, CTkImage, CTkLabel
 import json
 import requests
 import os
-import concurrent.futures
 import tkinter as tk
-from tkinter import filedialog, Menu
-from threading import Event, Thread
+from tkinter import filedialog, Menu, messagebox, Toplevel, Label
+from threading import Event, Thread, Lock
 import shutil
 import webbrowser
 import pyperclip
+import random
 
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
@@ -24,6 +24,10 @@ image_urls = []
 image_tags = []
 config_file = "config.json"
 autoplay_event = Event()
+download_event = Event()
+download_lock = Lock()
+
+fruits = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "kiwi", "lemon", "mango", "nectarine", "orange", "papaya", "quince", "raspberry", "strawberry", "tangerine", "ugli", "vanilla", "watermelon", "xigua", "yellowpassionfruit", "zucchini"]
 
 class App(CTk):
     def __init__(self):
@@ -61,8 +65,8 @@ class App(CTk):
         button_prev = customtkinter.CTkButton(master=frame, text="Previous", command=lambda: self.send_request("prev"))
         button_prev.grid(row=6, column=0, pady=2, padx=2, sticky="ew")
 
-        button_search = customtkinter.CTkButton(master=frame, text="Search", command=lambda: self.send_request("search"))
-        button_search.grid(row=6, column=1, pady=2, padx=2, sticky="ew")
+        self.button_search = customtkinter.CTkButton(master=frame, text="Search", command=lambda: self.send_request("search"))
+        self.button_search.grid(row=6, column=1, pady=2, padx=2, sticky="ew")
 
         button_next = customtkinter.CTkButton(master=frame, text="Next", command=lambda: self.send_request("next"))
         button_next.grid(row=6, column=2, pady=2, padx=2, sticky="ew")
@@ -81,7 +85,6 @@ class App(CTk):
 
         self.canvas.bind("<Double-Button-1>", self.open_image)
         self.canvas.bind("<Button-3>", self.show_context_menu)
-        self.canvas.bind("<space>", self.toggle_autoplay)
 
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_columnconfigure(1, weight=1)
@@ -98,14 +101,6 @@ class App(CTk):
         self.context_menu.add_command(label="Delete Image", command=self.delete_image)
         self.context_menu.add_command(label="Save Image", command=self.save_image)
         self.context_menu.add_command(label="Open Saved Images Folder", command=self.open_saved_images_folder)
-
-        self.bind("<Button-1>", self.close_context_menu)
-
-        self.bind_all("<F11>", self.check_focus_and_toggle_autoplay)
-
-    def check_focus_and_toggle_autoplay(self, event):
-        if self.focus_get() not in [self.entry1, self.entry3]:
-            self.toggle_autoplay()
 
     def toggle_site(self):
         if self.toggle_var.get() == "Gelbooru":
@@ -136,27 +131,72 @@ class App(CTk):
                 self.toggle_var.set(site)
                 self.toggle_button.configure(text=site)
 
-    def download_image(self, image_url, image_path):
-        image_data = requests.get(image_url).content
-        with open(image_path, 'wb') as f:
-            f.write(image_data)
-        print(f"Downloaded: {image_url} to {image_path}")
+    def get_next_image_name(self, images_dir):
+        existing_files = os.listdir(images_dir)
+        image_numbers = [int(f.split('_')[1].split('.')[0]) for f in existing_files if f.startswith('image_')]
+        next_number = max(image_numbers, default=0) + 1
+        return f"image_{next_number:03d}"
 
-    def delayed_download(self, image_url, image_path):
-        time.sleep(1)
-        self.download_image(image_url, image_path)
+    def download_image(self, image_url, images_dir, retries=3):
+        for attempt in range(retries):
+            if not download_event.is_set():
+                return None
+            try:
+                response = requests.head(image_url)
+                if 'Content-Length' in response.headers:
+                    size = int(response.headers['Content-Length'])
+                    if size > 10 * 1024 * 1024:  # 10 MB
+                        print(f"Skipping: {image_url} (size: {size / (1024 * 1024):.2f} MB)")
+                        return None
+
+                image_extension = os.path.splitext(image_url)[1]
+                image_name = self.get_next_image_name(images_dir) + image_extension
+                image_path = os.path.join(images_dir, image_name)
+                image_data = requests.get(image_url).content
+                with open(image_path, 'wb') as f:
+                    f.write(image_data)
+                print(f"Downloaded: {image_url} to {image_path}")
+                return image_path
+            except (requests.exceptions.RequestException, requests.exceptions.ChunkedEncodingError) as e:
+                print(f"Error downloading {image_url}: {e}")
+                if attempt < retries - 1:
+                    print(f"Retrying... ({attempt + 1}/{retries})")
+                    time.sleep(1)
+                else:
+                    print(f"Failed to download {image_url} after {retries} attempts")
+                    return None
 
     def background_download(self, images):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = []
-            for i, (image_url, image_path) in enumerate(images):
-                futures.append(executor.submit(self.download_image, image_url, image_path))
-            concurrent.futures.wait(futures)
-        self.display_image()
+        images_dir = os.path.join(os.path.dirname(__file__), "Images")
+        total_images = len(images)
+        for i, image_url in enumerate(images):
+            if not download_event.is_set():
+                break
+            image_path = self.download_image(image_url, images_dir)
+            if image_path:
+                with download_lock:
+                    image_files.append(image_path)
+                self.update_progress_bar((i + 1) / total_images)
+                if i == 0:
+                    self.display_image()
+        self.update_progress_bar(0) 
+
+    def update_progress_bar(self, value):
+        self.progress_bar.set(value)
 
     def send_request(self, request_type):
+        if request_type not in ["prev", "next"] and self.progress_bar.get() > 0:
+            self.show_popup("PLEASE WAIT TILL THE DOWNLOADS ARE FINISHED!")
+            return
+
         global my_count, data, image_files, image_urls, image_tags
         if request_type == "search":
+            download_event.clear()
+            with download_lock:
+                image_files.clear()
+                image_urls.clear()
+                image_tags.clear()
+            download_event.set()
 
             autoplay_event.clear()
             self.progress_bar.set(0)
@@ -187,24 +227,16 @@ class App(CTk):
                     else:
                         data = response.json()
                     my_count = 0
-                    image_files = []
-                    image_urls = []
-                    image_tags = []
                     images = []
-                    for i, post in enumerate(data):
+                    for post in data:
                         image_url = post["file_url"]
                         if image_url.endswith(".mp4"):
                             print("Skipping: " + image_url)
                             continue
-                        image_extension = os.path.splitext(image_url)[1]
-                        image_name = f"image_{i+1:03d}{image_extension}"
-                        image_path = os.path.join(images_dir, image_name)
-                        image_files.append(image_path)
                         image_urls.append(image_url)
                         image_tags.append(post["tags"])
-                        images.append((image_url, image_path))
-                    Thread(target=self.background_download, args=(images,)).start()
-                    self.display_image()  
+                    download_thread = Thread(target=self.background_download, args=(image_urls,))
+                    download_thread.start()
                 except json.JSONDecodeError:
                     print("Failed to decode JSON response")
             else:
@@ -237,7 +269,6 @@ class App(CTk):
             image_path = image_files[my_count]
             if not os.path.exists(image_path):
                 print(f"Image not found: {image_path}")
-                self.progress_bar.set(0.5)  
                 self.wait_for_image(image_path)
                 return
             print("Displaying: " + image_path)
@@ -260,7 +291,6 @@ class App(CTk):
             self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=self.tk_image, anchor="center")
             self.update_idletasks()
             self.update_info_label()
-            self.progress_bar.set(1)  
             print("> displayed " + str(my_count + 1) + " images out of " + str(len(image_files)))
             time.sleep(0.1)
 
@@ -303,8 +333,13 @@ class App(CTk):
             if os.path.exists(image_path):
                 saved_images_dir = os.path.join(os.path.dirname(__file__), "saved images")
                 os.makedirs(saved_images_dir, exist_ok=True)
-                shutil.copy(image_path, saved_images_dir)
-                print(f"Saved: {image_path} to {saved_images_dir}")
+                fruit_name = random.choice(fruits)
+                random_number = random.randint(0, 99999)
+                image_extension = os.path.splitext(image_path)[1]
+                new_image_name = f"{fruit_name}_{random_number:05d}{image_extension}"
+                new_image_path = os.path.join(saved_images_dir, new_image_name)
+                shutil.copy(image_path, new_image_path)
+                print(f"Saved: {image_path} to {new_image_path}")
 
     def open_saved_images_folder(self):
         saved_images_dir = os.path.join(os.path.dirname(__file__), "saved images")
@@ -319,9 +354,6 @@ class App(CTk):
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
 
-    def close_context_menu(self, event):
-        self.context_menu.unpost()
-
     def autoplay(self):
         global my_count
         if autoplay_event.is_set():
@@ -331,7 +363,7 @@ class App(CTk):
             if my_count >= len(image_files) - 1:
                 my_count = -1  
 
-    def toggle_autoplay(self, event=None):
+    def toggle_autoplay(self):
         if autoplay_event.is_set():
             autoplay_event.clear()
             self.button_autoplay.configure(text="Autoplay")
@@ -366,6 +398,23 @@ class App(CTk):
                 print(f"URL: {image_url} | Image not found | Delay: {self.slider.get()}s\nTags: {image_tags_text}")
         else:
             print(f"Delay: {self.slider.get()}s\nTags: ")
+
+    def show_popup(self, message):
+        popup = Toplevel(self)
+        popup.title("Download In Progress")
+        popup.geometry("400x120")
+
+        self.update_idletasks()
+        x = (self.winfo_screenwidth() // 2) - (400 // 2)
+        y = (self.winfo_screenheight() // 2) - (120 // 2)
+        popup.geometry(f"+{x}+{y}")
+
+        Label(popup, text=message, padx=30, pady=30).pack()
+
+        ok_button = customtkinter.CTkButton(popup, text="OK", command=popup.destroy)
+        ok_button.pack(pady=10)
+
+        self.after(5000, popup.destroy)
 
 if __name__ == "__main__":
     app = App()
