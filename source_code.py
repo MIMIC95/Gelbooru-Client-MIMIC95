@@ -52,19 +52,14 @@ class App(CTk):
         self.slider.set(2.5)
         self.slider.grid(row=2, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
 
-
         self.entry1 = customtkinter.CTkEntry(master=frame, placeholder_text="Tags")
         self.entry1.grid(row=3, column=1, columnspan=3, pady=2, padx=2, sticky="ew")
-
-        self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key", show="*")
-        self.entry3.grid(row=3, column=1, columnspan=3, pady=2, padx=2, sticky="ew")
-        self.entry3.grid_remove()  
 
         self.clear_button = customtkinter.CTkButton(master=frame, text="X", command=self.clear_entry1)
         self.clear_button.grid(row=3, column=0, pady=2, padx=2, sticky="ew")
 
         self.toggle_button = customtkinter.CTkButton(master=frame, text="API", command=self.toggle_entries)
-        self.toggle_button.grid(row=3, column=4, pady=2, padx=2, sticky="ew")
+        self.toggle_button.grid(row=6, column=1, pady=2, padx=2, sticky="ew")
 
         self.progress_bar = customtkinter.CTkProgressBar(master=frame)
         self.progress_bar.grid(row=5, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
@@ -74,16 +69,16 @@ class App(CTk):
         button_prev.grid(row=6, column=0, pady=2, padx=2, sticky="ew")
 
         self.button_search = customtkinter.CTkButton(master=frame, text="Search", command=lambda: self.send_request("search"))
-        self.button_search.grid(row=6, column=1, pady=2, padx=2, sticky="ew")
+        self.button_search.grid(row=3, column=4, pady=2, padx=2, sticky="ew") 
 
         button_next = customtkinter.CTkButton(master=frame, text="Next", command=lambda: self.send_request("next"))
-        button_next.grid(row=6, column=2, pady=2, padx=2, sticky="ew")
+        button_next.grid(row=6, column=4, pady=2, padx=2, sticky="ew") 
 
         self.button_autoplay = customtkinter.CTkButton(master=frame, text="Autoplay", command=self.toggle_autoplay)
         self.button_autoplay.grid(row=6, column=3, pady=2, padx=2, sticky="ew")
 
         button_backup = customtkinter.CTkButton(master=frame, text="BACKUP IMAGES", command=self.backup_images)
-        button_backup.grid(row=6, column=4, pady=2, padx=2, sticky="ew")
+        button_backup.grid(row=6, column=2, pady=2, padx=2, sticky="ew") 
 
         self.toggle_var = customtkinter.StringVar(value="Gelbooru")
         self.toggle_button_site = customtkinter.CTkButton(master=frame, text="Gelbooru", command=self.toggle_site)
@@ -106,22 +101,45 @@ class App(CTk):
         self.context_menu = Menu(self, tearoff=0)
         self.context_menu.add_command(label="Open Image URL", command=self.open_image_url)
         self.context_menu.add_command(label="Copy Tags", command=self.copy_tags)
-        self.context_menu.add_command(label="Delete Image", command=self.delete_image)
         self.context_menu.add_command(label="Save Image", command=self.save_image)
         self.context_menu.add_command(label="Open Saved Images Folder", command=self.open_saved_images_folder)
+
+        # Bind the on_closing method to the window close event
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        images_dir = os.path.join(os.path.dirname(__file__), "Images")
+        if os.path.exists(images_dir):
+            shutil.rmtree(images_dir)
+        self.destroy()
 
     def clear_entry1(self):
         self.entry1.delete(0, tk.END)
 
+    def open_api_key_window(self):
+        api_key_window = customtkinter.CTkToplevel(self)
+        api_key_window.title("Enter API Key")
+        api_key_window.geometry("300x150")
+        x = (self.winfo_screenwidth() // 2) - (400 // 2)
+        y = (self.winfo_screenheight() // 2) - (120 // 2)
+        api_key_window.geometry(f"+{x}+{y}")
+        api_key_window.attributes("-topmost", True)
+
+        customtkinter.CTkLabel(api_key_window, text="Enter your Gelbooru API Key:").pack(pady=10)
+        api_key_entry = customtkinter.CTkEntry(api_key_window, show="*")
+        api_key_entry.pack(pady=10)
+        api_key_entry.insert(0, self.config.get("api_key", ""))
+
+        def save_api_key():
+            api_key = api_key_entry.get()
+            self.save_config(self.entry1.get(), 100, api_key)
+            api_key_window.destroy()
+
+        save_button = customtkinter.CTkButton(api_key_window, text="Save", command=save_api_key)
+        save_button.pack(pady=10)
+
     def toggle_entries(self):
-        if self.toggle_button.cget("text") == "API":
-            self.entry1.grid_remove()
-            self.entry3.grid()
-            self.toggle_button.configure(text="TAGS")
-        else:
-            self.entry3.grid_remove()
-            self.entry1.grid()
-            self.toggle_button.configure(text="API")
+            self.open_api_key_window()
 
     def toggle_site(self):
         if self.toggle_var.get() == "Gelbooru":
@@ -133,24 +151,23 @@ class App(CTk):
         self.save_config(self.entry1.get(), 100, self.entry3.get())
 
     def save_config(self, tags, post_count, api_key):
-        config = {
-            "tags": tags,
+        self.config = {
             "post_count": post_count,
             "api_key": api_key,
             "site": self.toggle_var.get()
         }
         with open(config_file, 'w') as f:
-            json.dump(config, f)
+            json.dump(self.config, f)
 
     def load_config(self):
         if os.path.exists(config_file):
             with open(config_file, 'r') as f:
-                config = json.load(f)
-                self.entry1.insert(0, config.get("tags", ""))
-                self.entry3.insert(0, config.get("api_key", ""))
-                site = config.get("site", "Gelbooru")
+                self.config = json.load(f)
+                site = self.config.get("site", "Gelbooru")
                 self.toggle_var.set(site)
                 self.toggle_button_site.configure(text=site)
+        else:
+            self.config = {}
 
     def get_next_image_name(self, images_dir):
         existing_files = os.listdir(images_dir)
@@ -190,6 +207,7 @@ class App(CTk):
     def background_download(self, images):
         images_dir = os.path.join(os.path.dirname(__file__), "Images")
         total_images = len(images)
+        first_image_displayed = False
         for i, image_url in enumerate(images):
             if not download_event.is_set():
                 break
@@ -198,8 +216,9 @@ class App(CTk):
                 with download_lock:
                     image_files.append(image_path)
                 self.update_progress_bar((i + 1) / total_images)
-                if i == 0:
+                if not first_image_displayed:
                     self.display_image()
+                    first_image_displayed = True
         self.update_progress_bar(0)  # Reset progress bar to 0 when done
 
     def update_progress_bar(self, value):
@@ -228,11 +247,17 @@ class App(CTk):
                 shutil.rmtree(images_dir)
             os.makedirs(images_dir, exist_ok=True)
 
-            tags = self.entry1.get()
-            api_key = self.entry3.get()
+            negative_tags = ["-furry", "-loli", "-shota", "-child", "-ai", "-bad_quality", "-brat"]
+            user_tags = self.entry1.get().split()
+            tags_set = set(user_tags)
+
+            for tag in negative_tags:
+                if tag not in user_tags:
+                    tags_set.add(tag)
+
+            tags = "+".join(user_tags) + "+" + "+".join(tag for tag in tags_set if tag not in user_tags)
+            api_key = self.config.get("api_key", "")
             post_count = 100
-            tags = tags
-            self.save_config(tags, post_count, api_key)
 
             if self.toggle_var.get() == "Gelbooru":
                 request_url = f"https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&limit={post_count}&tags={tags}&api_key={api_key}"
@@ -243,10 +268,19 @@ class App(CTk):
 
             if response.status_code == 200:
                 try:
+                    if response.text.strip() == "":
+                        self.show_popup("No results found!")
+                        return
+
                     if self.toggle_var.get() == "Gelbooru":
-                        data = response.json()["post"]
+                        data = response.json().get("post", [])
                     else:
                         data = response.json()
+
+                    if not data:
+                        self.show_popup("No results found!")
+                        return
+
                     my_count = 0
                     images = []
                     for post in data:
@@ -259,9 +293,9 @@ class App(CTk):
                     download_thread = Thread(target=self.background_download, args=(image_urls,))
                     download_thread.start()
                 except json.JSONDecodeError:
-                    print("Failed to decode JSON response")
+                    self.show_popup("Failed to decode JSON response")
             else:
-                print(f"Request failed with status code: {response.status_code}")
+                self.show_popup(f"Request failed with status code: {response.status_code}")
         elif request_type == "next":
             self.next_image()
         elif request_type == "prev":
@@ -340,14 +374,6 @@ class App(CTk):
             pyperclip.copy(tags)
             print("Tags copied to clipboard")
 
-    def delete_image(self):
-        if my_count < len(image_files):
-            image_path = image_files[my_count]
-            if os.path.exists(image_path):
-                os.remove(image_path)
-                print(f"Deleted: {image_path}")
-                self.next_image()
-
     def save_image(self):
         if my_count < len(image_files):
             image_path = image_files[my_count]
@@ -421,8 +447,8 @@ class App(CTk):
             print(f"Delay: {self.slider.get()}s\nTags: ")
 
     def show_popup(self, message):
-        popup = Toplevel(self)
-        popup.title("Download In Progress")
+        popup = customtkinter.CTkToplevel(self)
+        popup.title("Notification")
         popup.geometry("400x120")
 
         self.update_idletasks()
@@ -430,16 +456,14 @@ class App(CTk):
         y = (self.winfo_screenheight() // 2) - (120 // 2)
         popup.geometry(f"+{x}+{y}")
 
-        Label(popup, text=message, padx=30, pady=30).pack()
+        popup.attributes("-topmost", True)
+
+        customtkinter.CTkLabel(popup, text=message, padx=30, pady=30).pack()
 
         ok_button = customtkinter.CTkButton(popup, text="OK", command=popup.destroy)
         ok_button.pack(pady=10)
-
-        self.after(5000, popup.destroy)
 
 if __name__ == "__main__":
     app = App()
     app.mainloop()
 
-#make a button to clear tags 
-#
