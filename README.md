@@ -7,8 +7,6 @@ Supported Platforms
 
 <h2>Showcase</h2>
 
-The Program keeps evolving, the video features not the current version.
-
 
 
 https://github.com/user-attachments/assets/f32163af-3ac9-4558-b6bd-f7e7d94d5840
