@@ -9,7 +9,11 @@ Supported Platforms
 
 The Program keeps evolving, the video features not the current version.
 
-https://github.com/user-attachments/assets/dd20a086-303f-48e8-a0e9-d147955f59eb
+
+
+https://github.com/user-attachments/assets/f32163af-3ac9-4558-b6bd-f7e7d94d5840
+
+
 
 <h4>Features</h4>
 - Download pictures from Safebooru (no API key required) and Gelbooru (API key required). <br/>
