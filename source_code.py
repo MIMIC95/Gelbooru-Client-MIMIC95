@@ -52,11 +52,19 @@ class App(CTk):
         self.slider.set(2.5)
         self.slider.grid(row=2, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
 
+
         self.entry1 = customtkinter.CTkEntry(master=frame, placeholder_text="Tags")
-        self.entry1.grid(row=3, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
+        self.entry1.grid(row=3, column=1, columnspan=3, pady=2, padx=2, sticky="ew")
 
         self.entry3 = customtkinter.CTkEntry(master=frame, placeholder_text="Gelbooru API Key", show="*")
-        self.entry3.grid(row=4, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
+        self.entry3.grid(row=3, column=1, columnspan=3, pady=2, padx=2, sticky="ew")
+        self.entry3.grid_remove()  
+
+        self.clear_button = customtkinter.CTkButton(master=frame, text="X", command=self.clear_entry1)
+        self.clear_button.grid(row=3, column=0, pady=2, padx=2, sticky="ew")
+
+        self.toggle_button = customtkinter.CTkButton(master=frame, text="API", command=self.toggle_entries)
+        self.toggle_button.grid(row=3, column=4, pady=2, padx=2, sticky="ew")
 
         self.progress_bar = customtkinter.CTkProgressBar(master=frame)
         self.progress_bar.grid(row=5, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
@@ -78,8 +86,8 @@ class App(CTk):
         button_backup.grid(row=6, column=4, pady=2, padx=2, sticky="ew")
 
         self.toggle_var = customtkinter.StringVar(value="Gelbooru")
-        self.toggle_button = customtkinter.CTkButton(master=frame, text="Gelbooru", command=self.toggle_site)
-        self.toggle_button.grid(row=7, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
+        self.toggle_button_site = customtkinter.CTkButton(master=frame, text="Gelbooru", command=self.toggle_site)
+        self.toggle_button_site.grid(row=7, column=0, columnspan=5, pady=2, padx=2, sticky="ew")
 
         self.load_config()
 
@@ -102,13 +110,26 @@ class App(CTk):
         self.context_menu.add_command(label="Save Image", command=self.save_image)
         self.context_menu.add_command(label="Open Saved Images Folder", command=self.open_saved_images_folder)
 
+    def clear_entry1(self):
+        self.entry1.delete(0, tk.END)
+
+    def toggle_entries(self):
+        if self.toggle_button.cget("text") == "API":
+            self.entry1.grid_remove()
+            self.entry3.grid()
+            self.toggle_button.configure(text="TAGS")
+        else:
+            self.entry3.grid_remove()
+            self.entry1.grid()
+            self.toggle_button.configure(text="API")
+
     def toggle_site(self):
         if self.toggle_var.get() == "Gelbooru":
             self.toggle_var.set("Safebooru")
-            self.toggle_button.configure(text="Safebooru")
+            self.toggle_button_site.configure(text="Safebooru")
         else:
             self.toggle_var.set("Gelbooru")
-            self.toggle_button.configure(text="Gelbooru")
+            self.toggle_button_site.configure(text="Gelbooru")
         self.save_config(self.entry1.get(), 100, self.entry3.get())
 
     def save_config(self, tags, post_count, api_key):
@@ -129,7 +150,7 @@ class App(CTk):
                 self.entry3.insert(0, config.get("api_key", ""))
                 site = config.get("site", "Gelbooru")
                 self.toggle_var.set(site)
-                self.toggle_button.configure(text=site)
+                self.toggle_button_site.configure(text=site)
 
     def get_next_image_name(self, images_dir):
         existing_files = os.listdir(images_dir)
@@ -179,7 +200,7 @@ class App(CTk):
                 self.update_progress_bar((i + 1) / total_images)
                 if i == 0:
                     self.display_image()
-        self.update_progress_bar(0) 
+        self.update_progress_bar(0)  # Reset progress bar to 0 when done
 
     def update_progress_bar(self, value):
         self.progress_bar.set(value)
@@ -419,3 +440,6 @@ class App(CTk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+
+#make a button to clear tags 
+#
