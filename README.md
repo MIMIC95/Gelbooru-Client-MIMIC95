@@ -28,6 +28,7 @@ https://github.com/user-attachments/assets/0277ced9-0f1f-423c-a08b-24ba787ac34d
 - Double-clicking the image opens it in the default image viewer.<br/>
 - Smart cleanup function that removes old search results when starting a new search or closing the program<br/>
 - Smart download function to download images efficiently without causing delays or unresponsiveness in the program.<br/>
+- automatically added negative tags (filters) to reduce weird content
 
 <hr>
 
